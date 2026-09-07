@@ -28,7 +28,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install build deps
-        run: pip install marimo numpy matplotlib
+        # uv is required by marimo's html-wasm export to resolve the local
+        # imports (replicator.py, portraits.py) into the bundle.
+        run: pip install marimo numpy matplotlib uv
       - name: Run the model tests
         run: python tests.py          # a failing model must not reach students
       - name: Build the WASM widget
