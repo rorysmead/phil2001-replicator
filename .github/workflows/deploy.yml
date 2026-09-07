@@ -5,12 +5,9 @@ name: Deploy widget to GitHub Pages
 # nothing to install. The Colab notebook needs no build; it is served from the
 # repo directly (see README).
 
-# NOTE: repo is private for now; GitHub Pages needs a public repo (free plan),
-# so auto-deploy on push is disabled to avoid failing Pages jobs. Re-enable by
-# uncommenting the push trigger once the repo is public and Pages is on.
 on:
-  # push:
-  #   branches: [main]
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:

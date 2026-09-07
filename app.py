@@ -159,7 +159,8 @@ def _(mo):
             "Replicator - discrete time (imitative)": "discrete",
             "Brown-von Neumann-Nash (innovative)": "bnn",
             "Logit best-response (perturbed best response)": "logit",
-            "Replicator-mutator (selection + mutation)": "replmut",
+            "Replicator-mutator - uniform mutation (selection + mutation)": "replmut",
+            "Replicator-mutator - fitness-weighted (selection + mutation)": "replmut_fw",
         },
         value="Replicator - continuous (imitative)", label="Dynamic")
     beta = mo.ui.slider(0.5, 30.0, value=5.0, step=0.5,
@@ -175,7 +176,7 @@ def _(mo):
 @app.cell
 def _(mo, mode, r, dyn_label, beta, mu, samples, compute):
     extra = (beta if dyn_label.value == "logit"
-             else mu if dyn_label.value == "replmut" else None)
+             else mu if dyn_label.value in ("replmut", "replmut_fw") else None)
     items = [dyn_label]
     if mode.value != "Two populations":
         items.append(r)                       # assortment: single-population only
@@ -193,7 +194,7 @@ def _(dyn_label, beta, mu, rp):
     # resolve the selected dynamic + its parameters (applies to every mode)
     dyn = rp.DYNAMICS.get(dyn_label.value, rp.DYNAMICS["replicator"])
     params = ({"beta": beta.value} if dyn_label.value == "logit"
-              else {"mu": mu.value} if dyn_label.value == "replmut" else {})
+              else {"mu": mu.value} if dyn_label.value in ("replmut", "replmut_fw") else {})
     return dyn, params
 
 

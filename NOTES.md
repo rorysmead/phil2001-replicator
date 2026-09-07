@@ -43,11 +43,15 @@ Both import the same core:
   - *imitative*: replicator (continuous) and discrete-time replicator;
   - *innovative*: Brown–von Neumann–Nash (rest points = Nash; extinct strategies can return);
   - *perturbed best-response*: logit (rationality knob `β`, rest points → Nash as `β→∞`);
-  - *selection + mutation*: replicator–mutator (mutation rate `μ`, rest points interior).
+  - *selection + mutation*: replicator–mutator (mutation rate `μ`, rest points interior),
+    in two forms — **uniform** additive mutation (Jacobian shifts by `−μI`, always
+    stabilising) and the standard **fitness-weighted** form (Nowak; mutation coupled to
+    reproduction, so its effect on stability is game-dependent — on the symmetric RPS it
+    leaves the centre neutral for all `μ`, where the uniform form damps it to a spiral).
 
-  Assortment `r` composes with all five. Comparing dynamics is the point: a conclusion that
+  Assortment `r` composes with all six. Comparing dynamics is the point: a conclusion that
   survives a change of dynamic is robust; one that does not is an artefact of the dynamic.
-  The **two-population** setting supports all five dynamics too, with fixed-point markers on
+  The **two-population** setting supports all six dynamics too, with fixed-point markers on
   the square.
 - **Equilibrium manifolds.** When a game is degenerate (a whole line/region of rest points,
   e.g. two interchangeable strategies), the tool represents it as an attracting/repelling

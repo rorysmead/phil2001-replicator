@@ -426,7 +426,11 @@ def estimate_basins(A, r=0.0, n_samples=2000, seed=None, dt=0.01,
 #                          points are quantal-response equilibria, interior,
 #                          approaching Nash as rationality beta -> infinity. [logit]
 #   selection-mutation  -- replicator plus mutation, which keeps every strategy
-#                          present; rest points move into the interior. [replicator-mutator]
+#                          present; rest points move into the interior. Two forms:
+#                          uniform ADDITIVE decay [replmut] (a clean -mu*I shift,
+#                          always stabilising) and the standard FITNESS-WEIGHTED
+#                          form [replmut_fw] (mutation coupled to reproduction, so
+#                          its effect on stability is game-dependent).
 
 def _disc_replicator_map(x, A, r=0.0):
     """One step of the DISCRETE-time (Maynard Smith) replicator map: x' = x f / fbar.
@@ -466,15 +470,43 @@ def _logit_field(x, A, r=0.0, beta=5.0):
 
 
 def _replicator_mutator_field(x, A, r=0.0, mu=0.05):
-    """Replicator plus uniform mutation at rate mu. Mutation keeps every strategy
-    present, pushing rest points into the interior. With this simple ADDITIVE
-    mutation the Jacobian shifts by -mu*I, so mutation is uniformly STABILISING:
-    on RPS the neutral centre becomes a stable spiral for any mu > 0. (The richer
-    Hopf-bifurcation / limit-cycle story needs a fitness-coupled mutation term,
-    which this model deliberately does not use.)"""
+    """Replicator plus uniform mutation at rate mu, in the simple ADDITIVE form:
+    every strategy decays toward the uniform mix at a flat rate, independent of
+    fitness. Mutation keeps every strategy present, pushing rest points into the
+    interior. Because the mutation term is fitness-INDEPENDENT the Jacobian shifts
+    by exactly -mu*I, so mutation is uniformly STABILISING: on RPS the neutral
+    centre becomes a stable spiral for any mu > 0. Contrast
+    `_replicator_mutator_fw_field`, the standard fitness-weighted form, whose
+    mutation is fitness-coupled and so is NOT uniformly stabilising. Both are
+    offered so the two can be compared."""
     x = np.asarray(x, dtype=float)
     n = len(x)
     return replicator_field(x, A, r) + mu * (np.ones(n) / n - x)
+
+
+def _replicator_mutator_fw_field(x, A, r=0.0, mu=0.05):
+    """Fitness-weighted replicator-mutator -- the STANDARD form (Nowak 2006;
+    Page & Nowak 2002). Offspring are produced in proportion to fitness and THEN
+    mutate uniformly at rate mu, i.e. with mutation matrix Q_ji = (1-mu)[i=j] + mu/n,
+
+        dx_i/dt = (1 - mu) * x_i * f_i  +  (mu/n) * sum_j x_j f_j  -  x_i * fbar
+
+    Here mutation is COUPLED to fitness (it is the reproduction step that mutates),
+    so it does NOT shift the Jacobian by a clean -mu*I the way the additive form
+    does. Its effect on stability is therefore GAME-DEPENDENT rather than uniformly
+    stabilising: on the symmetric zero-sum RPS shipped here it leaves the interior
+    a neutral CENTRE for every mu (it only slows the rotation), where the additive
+    form turns that same centre into a stable spiral. The fitness coupling is also
+    what makes genuinely non-replicator behaviour -- Hopf bifurcations, limit
+    cycles -- possible at all in other games; the additive form, being a pure
+    -mu*I shift, can never produce them. At mu = 0 it is exactly the replicator
+    dynamic; tangency holds because the three terms sum to
+    (1-mu)*fbar + mu*fbar - fbar = 0."""
+    x = np.asarray(x, dtype=float)
+    n = len(x)
+    f = effective_payoffs(x, A, r)
+    fbar = x @ f
+    return (1.0 - mu) * x * f + (mu / n) * fbar - x * fbar
 
 
 class Dynamics:
@@ -529,9 +561,12 @@ DYNAMICS = {
     "logit":      Dynamics("logit", "Logit best-response", "perturbed best-response",
                            False, _logit_field, "numerical", "jacobian",
                            params={"beta": 5.0}),
-    "replmut":    Dynamics("replmut", "Replicator-mutator", "selection-mutation",
+    "replmut":    Dynamics("replmut", "Replicator-mutator (uniform)", "selection-mutation",
                            False, _replicator_mutator_field, "numerical", "jacobian",
                            params={"mu": 0.05}),
+    "replmut_fw": Dynamics("replmut_fw", "Replicator-mutator (fitness-weighted)",
+                           "selection-mutation", False, _replicator_mutator_fw_field,
+                           "numerical", "jacobian", params={"mu": 0.05}),
 }
 
 
@@ -915,6 +950,10 @@ def _pop_response(dyn, pvec, f, **params):
     if key == "replmut":
         n = len(pvec)
         return pvec * (f - pvec @ f) + pr["mu"] * (np.ones(n) / n - pvec)
+    if key == "replmut_fw":
+        n = len(pvec)
+        fbar = pvec @ f
+        return (1.0 - pr["mu"]) * pvec * f + (pr["mu"] / n) * fbar - pvec * fbar
     return pvec * (f - pvec @ f)                 # replicator (also for continuous default)
 
 

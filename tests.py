@@ -175,16 +175,38 @@ def main():
     ok &= check("logit QRE is interior at low beta, -> Nash (all-Defect) at high beta",
                 lo_beta[0] > 0.2 and hi_beta[1] > 0.98)
 
-    # 10f. Replicator-mutator: mutation keeps every strategy present (interior rest point).
-    rm_pd = rp.rest_points_dyn(D["replmut"], A_pd, mu=0.05)
-    ok &= check("replicator-mutator keeps cooperators alive (interior rest point)",
-                len(rm_pd) == 1 and rm_pd[0][0] > 1e-3 and rm_pd[0][0] < 0.5)
+    # 10f. Replicator-mutator (both forms): mutation keeps every strategy present.
+    for key in ("replmut", "replmut_fw"):
+        rm_pd = rp.rest_points_dyn(D[key], A_pd, mu=0.05)
+        ok &= check(f"{key} keeps cooperators alive (interior rest point)",
+                    len(rm_pd) == 1 and 1e-3 < rm_pd[0][0] < 0.5)
+
+    # 10f'. At mu=0 BOTH mutator forms reduce EXACTLY to the replicator; at mu>0
+    #       they differ from each other (uniform-additive vs fitness-weighted).
+    xr = np.array([0.2, 0.3, 0.5])
+    rep0 = rp.replicator_field(xr, rps)
+    ok &= check("both mutator forms reduce to replicator at mu=0",
+                np.allclose(D["replmut"]._fn(xr, rps, 0.0, mu=0.0), rep0)
+                and np.allclose(D["replmut_fw"]._fn(xr, rps, 0.0, mu=0.0), rep0))
+    ok &= check("the two mutator forms genuinely differ at mu>0",
+                np.abs(D["replmut"]._fn(xr, rps, 0.0, mu=0.1)
+                       - D["replmut_fw"]._fn(xr, rps, 0.0, mu=0.1)).sum() > 1e-6)
+
+    # 10f''. The distinguishing behaviour on zero-sum RPS: uniform mutation shifts
+    #        the Jacobian by -mu*I (centre -> stable spiral); fitness-weighted
+    #        mutation is fitness-coupled and leaves the centre marginal (Re ~ 0).
+    ev_u = rp._reduced_eigs(lambda y: D["replmut"]._fn(y, rps, 0.0, mu=0.1), center)
+    ev_f = rp._reduced_eigs(lambda y: D["replmut_fw"]._fn(y, rps, 0.0, mu=0.1), center)
+    ok &= check("uniform mutation stabilises the RPS centre (Re ~ -mu)",
+                abs(ev_u.real.max() + 0.1) < 1e-3)
+    ok &= check("fitness-weighted mutation leaves the RPS centre marginal (Re ~ 0)",
+                abs(ev_f.real.max()) < 1e-3)
 
     # 10g. Assortment composes with every dynamic (it changes the payoff input).
     xh = np.array([0.5, 0.5])
     composes = all(np.abs(D[k].motion(xh, A_pd, 0.0) - D[k].motion(xh, A_pd, 0.4)).sum() > 1e-9
-                   for k in ("replicator", "discrete", "bnn", "logit", "replmut"))
-    ok &= check("assortment r composes with all five dynamics", composes)
+                   for k in ("replicator", "discrete", "bnn", "logit", "replmut", "replmut_fw"))
+    ok &= check("assortment r composes with all six dynamics", composes)
 
     # ---------------------------------------------------------------------------
     # 11. EQUILIBRIUM MANIFOLDS (neutral stability across a set)
@@ -267,13 +289,13 @@ def main():
     # Every dynamic handles a payoff-degenerate game without crashing.
     dupg = np.array([[1., 1., 0.], [1., 1., 0.], [0., 0., 1.]])
     degen_ok = True
-    for k in ("replicator", "discrete", "bnn", "logit", "replmut"):
-        kw = {"beta": 4.0} if k == "logit" else {"mu": 0.05} if k == "replmut" else {}
+    for k in ("replicator", "discrete", "bnn", "logit", "replmut", "replmut_fw"):
+        kw = {"beta": 4.0} if k == "logit" else {"mu": 0.05} if k in ("replmut", "replmut_fw") else {}
         try:
             rp.rest_objects(D[k], dupg, **kw)
         except Exception:
             degen_ok = False
-    ok &= check("all five dynamics handle a degenerate game without crashing", degen_ok)
+    ok &= check("all six dynamics handle a degenerate game without crashing", degen_ok)
 
     print("\n" + ("ALL TESTS PASSED" if ok else "SOME TESTS FAILED"))
     return 0 if ok else 1

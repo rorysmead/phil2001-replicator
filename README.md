@@ -13,7 +13,7 @@ Phase-portrait tool for the replicator dynamics — a teaching resource for PHIL
 - 2-strategy (phase line), 3-strategy (simplex), and two-population 2×2 (unit square) games.
 - Assortment slider `r`: positive = altruism lever, negative = spite mirror.
 - Basins of attraction by Monte Carlo with 95% CIs.
-- Five dynamics: replicator (continuous / discrete), BNN, logit best-response, replicator–mutator.
+- Six dynamics: replicator (continuous / discrete), BNN, logit best-response, and replicator–mutator in two forms (uniform mutation and the standard fitness-weighted form).
 
 ## Run locally
 
