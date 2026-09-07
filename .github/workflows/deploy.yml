@@ -1,0 +1,64 @@
+name: Deploy widget to GitHub Pages
+
+# Builds the marimo widget to a browser-only (WASM) page and publishes it to
+# GitHub Pages on every push to main. Students then just open the Pages URL --
+# nothing to install. The Colab notebook needs no build; it is served from the
+# repo directly (see README).
+
+# NOTE: repo is private for now; GitHub Pages needs a public repo (free plan),
+# so auto-deploy on push is disabled to avoid failing Pages jobs. Re-enable by
+# uncommenting the push trigger once the repo is public and Pages is on.
+on:
+  # push:
+  #   branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build deps
+        run: pip install marimo numpy matplotlib
+      - name: Run the model tests
+        run: python tests.py          # a failing model must not reach students
+      - name: Build the WASM widget
+        run: python -m marimo export html-wasm app.py -o site --mode run
+
+      # REQUIRED. marimo bundles the NOTEBOOK, not the modules it imports, so
+      # replicator.py and portraits.py are absent from site/ and
+      # `import replicator` fails in the browser -- silently, as a blank page.
+      # app.py fetches them at runtime from alongside index.html, so they have
+      # to be here.
+      - name: Copy the model modules next to index.html
+        run: cp replicator.py portraits.py site/
+
+      - name: Fail if the modules are missing
+        run: test -s site/replicator.py && test -s site/portraits.py
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
