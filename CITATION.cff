@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "PHIL 2001 Replicator Dynamics Explorer"
+abstract: "Phase-portrait and basin explorer for evolutionary game dynamics (replicator and related dynamics in one and two populations, assortment, Monte-Carlo basins); a teaching tool for PHIL 2001, Ethics and Evolutionary Games, at Northeastern University."
+type: software
+authors:
+  - family-names: Smead
+    given-names: Rory
+    affiliation: "Northeastern University"
+repository-code: "https://github.com/rorysmead/phil2001-replicator"
+url: "https://rorysmead.github.io/phil2001-replicator/"
+license: MIT
